@@ -4,7 +4,14 @@ import { Client, Worker, Task } from '@/types';
 import { OpenAIService } from './openai-service';
 
 export class EnhancedFileParser {
-  private static openaiService = new OpenAIService();
+  private static openaiService: OpenAIService | null = null;
+
+  private static getOpenAIService(): OpenAIService {
+    if (!this.openaiService) {
+      this.openaiService = new OpenAIService();
+    }
+    return this.openaiService;
+  }
 
   static async parseFile(file: File): Promise<{ data: any[], headers: string[], entityType: string }> {
     const extension = file.name.split('.').pop()?.toLowerCase();
@@ -37,7 +44,8 @@ export class EnhancedFileParser {
 
   private static async mapHeadersWithAI(headers: string[], entityType: string): Promise<Record<string, string>> {
     try {
-      const aiResponse = await this.openaiService.parseHeaders(headers, entityType);
+      const openaiService = this.getOpenAIService();
+      const aiResponse = await openaiService.parseHeaders(headers, entityType);
       
       if (aiResponse.success && aiResponse.data) {
         // Filter out null mappings and create reverse mapping

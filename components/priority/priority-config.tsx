@@ -129,13 +129,13 @@ export function PriorityConfig({ weights, onWeightsChange }: PriorityConfigProps
   return (
     <Card className="h-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-lg font-semibold">Priority Configuration</CardTitle>
           <div className="flex items-center space-x-2">
             <Badge variant={totalWeight === 100 ? 'default' : 'destructive'}>
               Total: {totalWeight}%
             </Badge>
-            <Button onClick={resetWeights} size="sm" variant="outline">
+            <Button onClick={resetWeights} size="sm" variant="outline" className="responsive-button">
               <RotateCcw className="h-4 w-4 mr-2" />
               Reset
             </Button>
@@ -167,36 +167,38 @@ export function PriorityConfig({ weights, onWeightsChange }: PriorityConfigProps
         {/* Weight Sliders */}
         <div className="space-y-6">
           <h4 className="font-medium text-sm text-gray-700">Criteria Weights</h4>
-          {criteriaConfig.map((criteria) => {
-            const Icon = criteria.icon;
-            const currentWeight = weights[criteria.key];
-            
-            return (
-              <div key={criteria.key} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`h-5 w-5 ${criteria.color}`} />
-                    <div>
-                      <Label className="font-medium">{criteria.label}</Label>
-                      <p className="text-xs text-gray-500">{criteria.description}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {criteriaConfig.map((criteria) => {
+              const Icon = criteria.icon;
+              const currentWeight = weights[criteria.key];
+              
+              return (
+                <div key={criteria.key} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${criteria.color}`} />
+                      <div>
+                        <Label className="font-medium text-sm">{criteria.label}</Label>
+                        <p className="text-xs text-gray-500 hidden sm:block">{criteria.description}</p>
+                      </div>
                     </div>
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {currentWeight}%
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="font-mono">
-                    {currentWeight}%
-                  </Badge>
+                  
+                  <Slider
+                    value={[currentWeight]}
+                    onValueChange={(value) => handleSliderChange(criteria.key, value)}
+                    max={50}
+                    min={0}
+                    step={1}
+                    className="w-full"
+                  />
                 </div>
-                
-                <Slider
-                  value={[currentWeight]}
-                  onValueChange={(value) => handleSliderChange(criteria.key, value)}
-                  max={50}
-                  min={0}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {/* Weight Distribution Visualization */}
@@ -209,7 +211,7 @@ export function PriorityConfig({ weights, onWeightsChange }: PriorityConfigProps
               
               return (
                 <div key={criteria.key} className="flex items-center space-x-3">
-                  <div className="w-20 text-xs font-medium">{criteria.label}</div>
+                  <div className="w-16 sm:w-20 text-xs font-medium truncate">{criteria.label}</div>
                   <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${
@@ -223,7 +225,7 @@ export function PriorityConfig({ weights, onWeightsChange }: PriorityConfigProps
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
-                  <div className="w-12 text-xs text-right font-mono">
+                  <div className="w-8 sm:w-12 text-xs text-right font-mono">
                     {Math.round(percentage)}%
                   </div>
                 </div>

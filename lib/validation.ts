@@ -16,144 +16,181 @@ export class DataValidator {
   validateAll(): ValidationError[] {
     this.errors = [];
     
-    this.validateClients();
-    this.validateWorkers();
-    this.validateTasks();
+    // Use batch processing for large datasets
+    this.validateClientsBatch();
+    this.validateWorkersBatch();
+    this.validateTasksBatch();
     this.validateCrossReferences();
     this.validateCapacityConstraints();
     
     return this.errors;
   }
 
-  private validateClients(): void {
+  private validateClientsBatch(): void {
     const clientIds = new Set<string>();
+    const batchSize = 100;
     
-    this.clients.forEach((client, index) => {
-      // Check for missing required fields
-      if (!client.ClientID) {
-        this.addError('error', 'Missing ClientID', 'ClientID', index, 'client');
-      }
-      
-      if (!client.ClientName) {
-        this.addError('error', 'Missing ClientName', 'ClientName', index, 'client');
-      }
-      
-      // Check for duplicate IDs
-      if (clientIds.has(client.ClientID)) {
-        this.addError('error', `Duplicate ClientID: ${client.ClientID}`, 'ClientID', index, 'client');
-      }
-      clientIds.add(client.ClientID);
-      
-      // Validate PriorityLevel range
-      if (client.PriorityLevel < 1 || client.PriorityLevel > 5) {
-        this.addError('error', 'PriorityLevel must be between 1-5', 'PriorityLevel', index, 'client');
-      }
-      
-      // Validate RequestedTaskIDs format
-      if (!Array.isArray(client.RequestedTaskIDs)) {
-        this.addError('error', 'RequestedTaskIDs must be an array', 'RequestedTaskIDs', index, 'client');
-      }
-      
-      // Validate AttributesJSON
-      if (typeof client.AttributesJSON === 'string') {
-        try {
-          JSON.parse(client.AttributesJSON);
-        } catch {
-          this.addError('error', 'Invalid JSON in AttributesJSON', 'AttributesJSON', index, 'client');
-        }
-      }
-    });
+    for (let i = 0; i < this.clients.length; i += batchSize) {
+      const batch = this.clients.slice(i, i + batchSize);
+      this.processBatch(batch, i, clientIds, 'client');
+    }
   }
 
-  private validateWorkers(): void {
+  private validateWorkersBatch(): void {
     const workerIds = new Set<string>();
+    const batchSize = 100;
     
-    this.workers.forEach((worker, index) => {
-      // Check for missing required fields
-      if (!worker.WorkerID) {
-        this.addError('error', 'Missing WorkerID', 'WorkerID', index, 'worker');
-      }
+    for (let i = 0; i < this.workers.length; i += batchSize) {
+      const batch = this.workers.slice(i, i + batchSize);
+      this.processBatch(batch, i, workerIds, 'worker');
+    }
+  }
+
+  private validateTasksBatch(): void {
+    const taskIds = new Set<string>();
+    const batchSize = 100;
+    
+    for (let i = 0; i < this.tasks.length; i += batchSize) {
+      const batch = this.tasks.slice(i, i + batchSize);
+      this.processBatch(batch, i, taskIds, 'task');
+    }
+  }
+
+  private processBatch(batch: any[], startIndex: number, idSet: Set<string>, entityType: 'client' | 'worker' | 'task'): void {
+    batch.forEach((item, batchIndex) => {
+      const index = startIndex + batchIndex;
       
-      if (!worker.WorkerName) {
-        this.addError('error', 'Missing WorkerName', 'WorkerName', index, 'worker');
-      }
-      
-      // Check for duplicate IDs
-      if (workerIds.has(worker.WorkerID)) {
-        this.addError('error', `Duplicate WorkerID: ${worker.WorkerID}`, 'WorkerID', index, 'worker');
-      }
-      workerIds.add(worker.WorkerID);
-      
-      // Validate Skills format
-      if (!Array.isArray(worker.Skills)) {
-        this.addError('error', 'Skills must be an array', 'Skills', index, 'worker');
-      }
-      
-      // Validate AvailableSlots format and values
-      if (!Array.isArray(worker.AvailableSlots)) {
-        this.addError('error', 'AvailableSlots must be an array', 'AvailableSlots', index, 'worker');
-      } else {
-        const invalidSlots = worker.AvailableSlots.filter(slot => !Number.isInteger(slot) || slot < 1);
-        if (invalidSlots.length > 0) {
-          this.addError('error', 'AvailableSlots must contain positive integers', 'AvailableSlots', index, 'worker');
-        }
-      }
-      
-      // Validate MaxLoadPerPhase
-      if (!Number.isInteger(worker.MaxLoadPerPhase) || worker.MaxLoadPerPhase < 1) {
-        this.addError('error', 'MaxLoadPerPhase must be a positive integer', 'MaxLoadPerPhase', index, 'worker');
-      }
-      
-      // Check if worker is overloaded
-      if (worker.AvailableSlots.length < worker.MaxLoadPerPhase) {
-        this.addError('warning', 'Worker has more max load than available slots', 'MaxLoadPerPhase', index, 'worker');
+      switch (entityType) {
+        case 'client':
+          this.validateClient(item as Client, index, idSet);
+          break;
+        case 'worker':
+          this.validateWorker(item as Worker, index, idSet);
+          break;
+        case 'task':
+          this.validateTask(item as Task, index, idSet);
+          break;
       }
     });
   }
 
-  private validateTasks(): void {
-    const taskIds = new Set<string>();
+  private validateClient(client: Client, index: number, clientIds: Set<string>): void {
+    // Check for missing required fields
+    if (!client.ClientID) {
+      this.addError('error', 'Missing ClientID', 'ClientID', index, 'client');
+    }
     
-    this.tasks.forEach((task, index) => {
-      // Check for missing required fields
-      if (!task.TaskID) {
-        this.addError('error', 'Missing TaskID', 'TaskID', index, 'task');
+    if (!client.ClientName) {
+      this.addError('error', 'Missing ClientName', 'ClientName', index, 'client');
+    }
+    
+    // Check for duplicate IDs
+    if (clientIds.has(client.ClientID)) {
+      this.addError('error', `Duplicate ClientID: ${client.ClientID}`, 'ClientID', index, 'client');
+    }
+    clientIds.add(client.ClientID);
+    
+    // Validate PriorityLevel range
+    if (client.PriorityLevel < 1 || client.PriorityLevel > 5) {
+      this.addError('error', 'PriorityLevel must be between 1-5', 'PriorityLevel', index, 'client');
+    }
+    
+    // Validate RequestedTaskIDs format
+    if (!Array.isArray(client.RequestedTaskIDs)) {
+      this.addError('error', 'RequestedTaskIDs must be an array', 'RequestedTaskIDs', index, 'client');
+    }
+    
+    // Validate AttributesJSON
+    if (typeof client.AttributesJSON === 'string') {
+      try {
+        JSON.parse(client.AttributesJSON);
+      } catch {
+        this.addError('error', 'Invalid JSON in AttributesJSON', 'AttributesJSON', index, 'client');
       }
-      
-      if (!task.TaskName) {
-        this.addError('error', 'Missing TaskName', 'TaskName', index, 'task');
+    }
+  }
+
+  private validateWorker(worker: Worker, index: number, workerIds: Set<string>): void {
+    // Check for missing required fields
+    if (!worker.WorkerID) {
+      this.addError('error', 'Missing WorkerID', 'WorkerID', index, 'worker');
+    }
+    
+    if (!worker.WorkerName) {
+      this.addError('error', 'Missing WorkerName', 'WorkerName', index, 'worker');
+    }
+    
+    // Check for duplicate IDs
+    if (workerIds.has(worker.WorkerID)) {
+      this.addError('error', `Duplicate WorkerID: ${worker.WorkerID}`, 'WorkerID', index, 'worker');
+    }
+    workerIds.add(worker.WorkerID);
+    
+    // Validate Skills format
+    if (!Array.isArray(worker.Skills)) {
+      this.addError('error', 'Skills must be an array', 'Skills', index, 'worker');
+    }
+    
+    // Validate AvailableSlots format and values
+    if (!Array.isArray(worker.AvailableSlots)) {
+      this.addError('error', 'AvailableSlots must be an array', 'AvailableSlots', index, 'worker');
+    } else {
+      const invalidSlots = worker.AvailableSlots.filter(slot => !Number.isInteger(slot) || slot < 1);
+      if (invalidSlots.length > 0) {
+        this.addError('error', 'AvailableSlots must contain positive integers', 'AvailableSlots', index, 'worker');
       }
-      
-      // Check for duplicate IDs
-      if (taskIds.has(task.TaskID)) {
-        this.addError('error', `Duplicate TaskID: ${task.TaskID}`, 'TaskID', index, 'task');
+    }
+    
+    // Validate MaxLoadPerPhase
+    if (!Number.isInteger(worker.MaxLoadPerPhase) || worker.MaxLoadPerPhase < 1) {
+      this.addError('error', 'MaxLoadPerPhase must be a positive integer', 'MaxLoadPerPhase', index, 'worker');
+    }
+    
+    // Check if worker is overloaded
+    if (worker.AvailableSlots.length < worker.MaxLoadPerPhase) {
+      this.addError('warning', 'Worker has more max load than available slots', 'MaxLoadPerPhase', index, 'worker');
+    }
+  }
+
+  private validateTask(task: Task, index: number, taskIds: Set<string>): void {
+    // Check for missing required fields
+    if (!task.TaskID) {
+      this.addError('error', 'Missing TaskID', 'TaskID', index, 'task');
+    }
+    
+    if (!task.TaskName) {
+      this.addError('error', 'Missing TaskName', 'TaskName', index, 'task');
+    }
+    
+    // Check for duplicate IDs
+    if (taskIds.has(task.TaskID)) {
+      this.addError('error', `Duplicate TaskID: ${task.TaskID}`, 'TaskID', index, 'task');
+    }
+    taskIds.add(task.TaskID);
+    
+    // Validate Duration
+    if (!Number.isInteger(task.Duration) || task.Duration < 1) {
+      this.addError('error', 'Duration must be a positive integer', 'Duration', index, 'task');
+    }
+    
+    // Validate RequiredSkills format
+    if (!Array.isArray(task.RequiredSkills)) {
+      this.addError('error', 'RequiredSkills must be an array', 'RequiredSkills', index, 'task');
+    }
+    
+    // Validate MaxConcurrent
+    if (!Number.isInteger(task.MaxConcurrent) || task.MaxConcurrent < 1) {
+      this.addError('error', 'MaxConcurrent must be a positive integer', 'MaxConcurrent', index, 'task');
+    }
+    
+    // Validate PreferredPhases format
+    if (typeof task.PreferredPhases === 'string') {
+      if (!this.isValidPhaseRange(task.PreferredPhases)) {
+        this.addError('error', 'Invalid PreferredPhases format', 'PreferredPhases', index, 'task');
       }
-      taskIds.add(task.TaskID);
-      
-      // Validate Duration
-      if (!Number.isInteger(task.Duration) || task.Duration < 1) {
-        this.addError('error', 'Duration must be a positive integer', 'Duration', index, 'task');
-      }
-      
-      // Validate RequiredSkills format
-      if (!Array.isArray(task.RequiredSkills)) {
-        this.addError('error', 'RequiredSkills must be an array', 'RequiredSkills', index, 'task');
-      }
-      
-      // Validate MaxConcurrent
-      if (!Number.isInteger(task.MaxConcurrent) || task.MaxConcurrent < 1) {
-        this.addError('error', 'MaxConcurrent must be a positive integer', 'MaxConcurrent', index, 'task');
-      }
-      
-      // Validate PreferredPhases format
-      if (typeof task.PreferredPhases === 'string') {
-        if (!this.isValidPhaseRange(task.PreferredPhases)) {
-          this.addError('error', 'Invalid PreferredPhases format', 'PreferredPhases', index, 'task');
-        }
-      } else if (!Array.isArray(task.PreferredPhases)) {
-        this.addError('error', 'PreferredPhases must be an array or range string', 'PreferredPhases', index, 'task');
-      }
-    });
+    } else if (!Array.isArray(task.PreferredPhases)) {
+      this.addError('error', 'PreferredPhases must be an array or range string', 'PreferredPhases', index, 'task');
+    }
   }
 
   private validateCrossReferences(): void {

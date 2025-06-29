@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Header } from '@/components/layout/header';
 import { DataTable } from '@/components/data-grid/data-table';
@@ -12,10 +12,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EnhancedFileParser } from '@/lib/enhanced-file-parser';
 import { DataValidator } from '@/lib/validation';
 import { OpenAIService } from '@/lib/openai-service';
+import { useWorker } from '@/lib/hooks/use-worker';
 import { DataState, Client, Worker, Task, ValidationError, BusinessRule, PriorityWeights } from '@/types';
-import { Info, Upload, Database, Settings, Target, Sparkles, Brain } from 'lucide-react';
+import { Info, Upload, Database, Settings, Target, Sparkles, Brain, Zap } from 'lucide-react';
 
 export default function Home() {
+  const [isClient, setIsClient] = useState(false);
   const [dataState, setDataState] = useState<DataState>({
     clients: [],
     workers: [],
@@ -36,9 +38,17 @@ export default function Home() {
   const [isValidating, setIsValidating] = useState(false);
   const [searchResults, setSearchResults] = useState<any>(null);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const { postMessage: postWorkerMessage, isSupported: isWorkerSupported } = useWorker();
+
+  // Set isClient to true after component mounts to fix hydration issues
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Initialize OpenAI service only when needed to avoid constructor errors
-  const getOpenAIService = useCallback(() => {
+  const openaiService = useMemo(() => {
     try {
       return new OpenAIService();
     } catch (error) {
@@ -48,10 +58,11 @@ export default function Home() {
   }, []);
 
   const handleFileUpload = useCallback(async (files: FileList) => {
-    const fileArray = Array.from(files);
-    setIsAIProcessing(true);
+    const fileArray = Array.from(files); // Use Array.from instead of for...of
+    setIsProcessing(true);
     
-    for (const file of fileArray) {
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
       try {
         toast.info(`Processing ${file.name} with AI...`);
         
@@ -63,9 +74,9 @@ export default function Home() {
         }));
         
         // Run AI validation on uploaded data if OpenAI is available
-        const openaiService = getOpenAIService();
         if (openaiService) {
           try {
+            setIsAIProcessing(true);
             const aiValidation = await openaiService.validateDataWithAI(data, entityType);
             if (aiValidation.success && aiValidation.data) {
               const aiErrors = aiValidation.data.map((error: any) => ({
@@ -81,6 +92,8 @@ export default function Home() {
             }
           } catch (aiError) {
             console.warn('AI validation failed:', aiError);
+          } finally {
+            setIsAIProcessing(false);
           }
         }
         
@@ -90,8 +103,8 @@ export default function Home() {
       }
     }
     
-    setIsAIProcessing(false);
-  }, [getOpenAIService]);
+    setIsProcessing(false);
+  }, [openaiService]);
 
   const handleDataChange = useCallback((index: number, field: string, value: any) => {
     setDataState(prev => {
@@ -110,49 +123,78 @@ export default function Home() {
   const validateData = useCallback(async () => {
     setIsValidating(true);
     
-    // Run standard validation
-    const validator = new DataValidator(dataState.clients, dataState.workers, dataState.tasks);
-    const standardErrors = validator.validateAll();
-    
-    // Run AI validation for additional insights if OpenAI is available
-    let aiErrors: ValidationError[] = [];
-    const openaiService = getOpenAIService();
-    if (openaiService) {
-      try {
-        const allData = [
-          ...dataState.clients.map(c => ({ ...c, entityType: 'client' })),
-          ...dataState.workers.map(w => ({ ...w, entityType: 'worker' })),
-          ...dataState.tasks.map(t => ({ ...t, entityType: 'task' }))
-        ];
-        
-        for (const entityType of ['client', 'worker', 'task']) {
-          const entityData = allData.filter(item => item.entityType === entityType);
-          if (entityData.length > 0) {
-            const aiValidation = await openaiService.validateDataWithAI(entityData, entityType);
-            if (aiValidation.success && aiValidation.data) {
-              const entityAIErrors = aiValidation.data.map((error: any) => ({
-                ...error,
-                id: `ai-${Date.now()}-${Math.random()}`,
-                entity: entityType
-              }));
-              aiErrors = [...aiErrors, ...entityAIErrors];
+    try {
+      // Try using Web Worker for validation if supported and client-side
+      if (isClient && isWorkerSupported()) {
+        try {
+          const result = await postWorkerMessage({
+            type: 'VALIDATE_DATA',
+            payload: {
+              clients: dataState.clients,
+              workers: dataState.workers,
+              tasks: dataState.tasks
+            }
+          });
+          
+          if (result.success) {
+            setDataState(prev => ({ ...prev, validationErrors: result.data }));
+            toast.success(`🔍 Validation complete: ${result.data.length} issues found (Web Worker)`);
+            return;
+          }
+        } catch (workerError) {
+          console.warn('Web Worker validation failed, falling back to main thread:', workerError);
+        }
+      }
+      
+      // Fallback to main thread validation
+      const validator = new DataValidator(dataState.clients, dataState.workers, dataState.tasks);
+      const standardErrors = validator.validateAll();
+      
+      // Run AI validation for additional insights if OpenAI is available
+      let aiErrors: ValidationError[] = [];
+      if (openaiService) {
+        try {
+          setIsAIProcessing(true);
+          const allData = [
+            ...dataState.clients.map(c => ({ ...c, entityType: 'client' })),
+            ...dataState.workers.map(w => ({ ...w, entityType: 'worker' })),
+            ...dataState.tasks.map(t => ({ ...t, entityType: 'task' }))
+          ];
+          
+          for (const entityType of ['client', 'worker', 'task']) {
+            const entityData = allData.filter(item => item.entityType === entityType);
+            if (entityData.length > 0) {
+              const aiValidation = await openaiService.validateDataWithAI(entityData, entityType);
+              if (aiValidation.success && aiValidation.data) {
+                const entityAIErrors = aiValidation.data.map((error: any) => ({
+                  ...error,
+                  id: `ai-${Date.now()}-${Math.random()}`,
+                  entity: entityType
+                }));
+                aiErrors = [...aiErrors, ...entityAIErrors];
+              }
             }
           }
+        } catch (error) {
+          console.warn('AI validation failed:', error);
+        } finally {
+          setIsAIProcessing(false);
         }
-      } catch (error) {
-        console.warn('AI validation failed:', error);
       }
+      
+      const allErrors = [...standardErrors, ...aiErrors];
+      setDataState(prev => ({ ...prev, validationErrors: allErrors }));
+      
+      toast.success(`🔍 Validation complete: ${allErrors.length} issues found`);
+    } catch (error) {
+      toast.error('Validation failed');
+      console.error('Validation error:', error);
+    } finally {
+      setIsValidating(false);
     }
-    
-    const allErrors = [...standardErrors, ...aiErrors];
-    setDataState(prev => ({ ...prev, validationErrors: allErrors }));
-    setIsValidating(false);
-    
-    toast.success(`🔍 Validation complete: ${allErrors.length} issues found`);
-  }, [dataState.clients, dataState.workers, dataState.tasks, getOpenAIService]);
+  }, [dataState.clients, dataState.workers, dataState.tasks, openaiService, isClient, isWorkerSupported, postWorkerMessage]);
 
   const handleAISearch = useCallback(async (query: string) => {
-    const openaiService = getOpenAIService();
     if (!openaiService) {
       toast.error('AI search is not available - OpenAI API key not configured');
       return;
@@ -179,7 +221,7 @@ export default function Home() {
     } finally {
       setIsAIProcessing(false);
     }
-  }, [dataState, getOpenAIService]);
+  }, [dataState, openaiService]);
 
   const addBusinessRule = useCallback((rule: Omit<BusinessRule, 'id'>) => {
     const newRule: BusinessRule = {
@@ -345,26 +387,26 @@ export default function Home() {
         isDataLoaded={isDataLoaded}
       />
       
-      <main className="container mx-auto px-6 py-8 max-w-7xl">
+      <main className="responsive-container py-4 sm:py-6 lg:py-8 max-w-7xl mx-auto">
         {!isDataLoaded ? (
-          <div className="text-center py-20 animate-fade-in">
-            <div className="relative mb-8">
-              <Upload className="h-20 w-20 mx-auto text-blue-400 opacity-60" />
-              <Sparkles className="absolute -top-2 -right-2 h-8 w-8 text-purple-500 animate-pulse" />
+          <div className="text-center py-12 sm:py-16 lg:py-20 animate-fade-in">
+            <div className="relative mb-6 sm:mb-8">
+              <Upload className="h-16 w-16 sm:h-20 sm:w-20 mx-auto text-blue-400 opacity-60" />
+              <Sparkles className="absolute -top-2 -right-2 h-6 w-6 sm:h-8 sm:w-8 text-purple-500 animate-pulse" />
             </div>
             
-            <h2 className="text-4xl font-bold mb-6 text-gradient">Welcome to Data Alchemist</h2>
-            <p className="text-gray-600 mb-12 max-w-3xl mx-auto text-lg leading-relaxed">
+            <h2 className="responsive-heading font-bold mb-4 sm:mb-6 text-gradient">Welcome to Data Alchemist</h2>
+            <p className="text-gray-600 mb-8 sm:mb-12 max-w-3xl mx-auto responsive-text leading-relaxed px-4">
               Transform your messy spreadsheets into clean, validated data with our AI-powered system. 
               Upload your CSV or XLSX files and let artificial intelligence help you clean, validate, and configure allocation rules.
             </p>
             
-            <Alert className="max-w-4xl mx-auto text-left apple-card">
+            <Alert className="max-w-4xl mx-auto text-left apple-card responsive-card">
               <Brain className="h-5 w-5 text-blue-600" />
               <AlertDescription>
                 <div className="space-y-4">
-                  <div className="font-semibold text-lg text-gray-900">🚀 AI-Powered Features</div>
-                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div className="font-semibold text-lg text-gray-900">🚀 Enhanced Performance Features</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <div className="font-medium text-gray-800 mb-2">📊 Smart Data Processing</div>
                       <ul className="space-y-1 text-gray-600 ml-4">
@@ -374,43 +416,55 @@ export default function Home() {
                       </ul>
                     </div>
                     <div>
-                      <div className="font-medium text-gray-800 mb-2">🤖 AI Capabilities</div>
+                      <div className="font-medium text-gray-800 mb-2">⚡ Performance Optimizations</div>
                       <ul className="space-y-1 text-gray-600 ml-4">
-                        <li>• Intelligent header mapping for misnamed columns</li>
-                        <li>• Natural language data search and filtering</li>
-                        <li>• AI-powered validation and error detection</li>
-                        <li>• Smart business rule recommendations</li>
-                        <li>• Automated data correction suggestions</li>
+                        <li>• Web Workers for heavy processing tasks</li>
+                        <li>• Virtualized tables for large datasets</li>
+                        <li>• Batch validation for improved performance</li>
+                        <li>• Intelligent header mapping with AI fallbacks</li>
+                        <li>• Graceful degradation when AI is unavailable</li>
                       </ul>
                     </div>
                   </div>
+                  {isClient && isWorkerSupported() && (
+                    <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-2 rounded">
+                      <Zap className="h-4 w-4" />
+                      <span className="text-sm font-medium">Web Workers supported - Enhanced performance enabled</span>
+                    </div>
+                  )}
                 </div>
               </AlertDescription>
             </Alert>
           </div>
         ) : (
           <div className="animate-fade-in">
-            <Tabs defaultValue="data" className="space-y-8">
-              <TabsList className="grid w-full grid-cols-4 h-14 p-1 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200/60">
-                <TabsTrigger value="data" className="flex items-center space-x-2 rounded-xl font-medium">
-                  <Database className="h-4 w-4" />
-                  <span>Data Management</span>
-                </TabsTrigger>
-                <TabsTrigger value="validation" className="flex items-center space-x-2 rounded-xl font-medium">
-                  <Settings className="h-4 w-4" />
-                  <span>Validation</span>
-                </TabsTrigger>
-                <TabsTrigger value="rules" className="flex items-center space-x-2 rounded-xl font-medium">
-                  <Brain className="h-4 w-4" />
-                  <span>AI Rules</span>
-                </TabsTrigger>
-                <TabsTrigger value="priority" className="flex items-center space-x-2 rounded-xl font-medium">
-                  <Target className="h-4 w-4" />
-                  <span>Priorities</span>
-                </TabsTrigger>
-              </TabsList>
+            <Tabs defaultValue="data" className="space-y-6 sm:space-y-8">
+              <div className="responsive-overflow">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-12 sm:h-14 p-1 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200/60 min-w-max">
+                  <TabsTrigger value="data" className="flex items-center space-x-1 sm:space-x-2 rounded-xl font-medium text-xs sm:text-sm px-2 sm:px-4">
+                    <Database className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Data Management</span>
+                    <span className="sm:hidden">Data</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="validation" className="flex items-center space-x-1 sm:space-x-2 rounded-xl font-medium text-xs sm:text-sm px-2 sm:px-4">
+                    <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Validation</span>
+                    <span className="sm:hidden">Valid</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="rules" className="flex items-center space-x-1 sm:space-x-2 rounded-xl font-medium text-xs sm:text-sm px-2 sm:px-4">
+                    <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">AI Rules</span>
+                    <span className="sm:hidden">Rules</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="priority" className="flex items-center space-x-1 sm:space-x-2 rounded-xl font-medium text-xs sm:text-sm px-2 sm:px-4">
+                    <Target className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Priorities</span>
+                    <span className="sm:hidden">Prior</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
               
-              <TabsContent value="data" className="space-y-6">
+              <TabsContent value="data" className="space-y-4 sm:space-y-6">
                 {searchResults && (
                   <Alert className="ai-suggestion animate-slide-up">
                     <Sparkles className="h-4 w-4 text-blue-600" />
@@ -427,13 +481,21 @@ export default function Home() {
                 )}
                 
                 <Tabs value={activeDataType} onValueChange={(value: any) => setActiveDataType(value)}>
-                  <TabsList className="bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/60">
-                    <TabsTrigger value="client" className="rounded-lg">Clients ({dataState.clients.length})</TabsTrigger>
-                    <TabsTrigger value="worker" className="rounded-lg">Workers ({dataState.workers.length})</TabsTrigger>
-                    <TabsTrigger value="task" className="rounded-lg">Tasks ({dataState.tasks.length})</TabsTrigger>
-                  </TabsList>
+                  <div className="responsive-overflow">
+                    <TabsList className="bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/60 min-w-max">
+                      <TabsTrigger value="client" className="rounded-lg text-xs sm:text-sm px-2 sm:px-4">
+                        Clients ({dataState.clients.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="worker" className="rounded-lg text-xs sm:text-sm px-2 sm:px-4">
+                        Workers ({dataState.workers.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="task" className="rounded-lg text-xs sm:text-sm px-2 sm:px-4">
+                        Tasks ({dataState.tasks.length})
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
                   
-                  <TabsContent value={activeDataType} className="mt-6">
+                  <TabsContent value={activeDataType} className="mt-4 sm:mt-6">
                     {(() => {
                       const { data, headers } = getCurrentData();
                       return data.length > 0 ? (
@@ -446,9 +508,9 @@ export default function Home() {
                           onValidate={validateData}
                         />
                       ) : (
-                        <div className="text-center py-16 apple-card">
-                          <Upload className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                          <p className="text-gray-600 text-lg font-medium">No {activeDataType} data loaded yet</p>
+                        <div className="text-center py-12 sm:py-16 apple-card responsive-card">
+                          <Upload className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-gray-400" />
+                          <p className="text-gray-600 text-base sm:text-lg font-medium">No {activeDataType} data loaded yet</p>
                           <p className="text-sm text-gray-500 mt-2">Upload a file to get started with AI processing</p>
                         </div>
                       );
@@ -496,12 +558,16 @@ export default function Home() {
           </div>
         )}
         
-        {isAIProcessing && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="apple-card p-8 max-w-sm mx-4 text-center">
-              <Sparkles className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-spin" />
-              <p className="font-medium text-gray-900">AI is processing...</p>
-              <p className="text-sm text-gray-600 mt-2">Please wait while we work our magic</p>
+        {(isAIProcessing || isProcessing) && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="apple-card p-6 sm:p-8 max-w-sm mx-4 text-center">
+              <Sparkles className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-blue-600 animate-spin" />
+              <p className="font-medium text-gray-900 text-sm sm:text-base">
+                {isAIProcessing ? 'AI is processing...' : 'Processing files...'}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-600 mt-2">
+                {isClient && isWorkerSupported() ? 'Using Web Workers for optimal performance' : 'Please wait while we work our magic'}
+              </p>
             </div>
           </div>
         )}

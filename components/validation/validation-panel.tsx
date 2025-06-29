@@ -103,9 +103,9 @@ export function ValidationPanel({
                 {getErrorIcon(error.type)}
                 <div className="flex-1 min-w-0">
                   <AlertDescription className="text-sm">
-                    <div className="flex items-center justify-between">
-                      <span>{error.message}</span>
-                      <Badge variant={getErrorBadgeVariant(error.type)} className="text-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <span className="break-words">{error.message}</span>
+                      <Badge variant={getErrorBadgeVariant(error.type)} className="text-xs self-start sm:self-center">
                         {error.field || 'General'}
                       </Badge>
                     </div>
@@ -126,13 +126,14 @@ export function ValidationPanel({
 
   const renderSuggestions = () => (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h4 className="font-medium text-sm text-gray-700">AI Suggestions</h4>
         <Button
           onClick={generateAISuggestions}
           disabled={isLoadingSuggestions || validationErrors.length === 0}
           size="sm"
           variant="outline"
+          className="responsive-button"
         >
           {isLoadingSuggestions ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -157,15 +158,15 @@ export function ValidationPanel({
                 <div className="flex-1">
                   <AlertDescription className="text-sm">
                     <div className="font-medium mb-1">{suggestion.suggestion}</div>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="text-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <Badge variant="outline" className="text-xs self-start">
                         Confidence: {Math.round(suggestion.confidence * 100)}%
                       </Badge>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => onApplySuggestion(suggestion.errorId, suggestion.suggestion)}
-                        className="text-xs"
+                        className="text-xs self-start sm:self-center"
                       >
                         Apply
                       </Button>
@@ -182,13 +183,13 @@ export function ValidationPanel({
 
   return (
     <Card className="h-full">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 pb-4">
         <CardTitle className="text-lg font-semibold">Validation Results</CardTitle>
         <Button
           onClick={onRunValidation}
           disabled={isValidating}
           size="sm"
-          className="flex items-center space-x-2"
+          className="responsive-button flex items-center space-x-2"
         >
           {isValidating ? (
             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -200,8 +201,8 @@ export function ValidationPanel({
       </CardHeader>
       
       <CardContent className="p-0">
-        <div className="px-6 pb-4">
-          <div className="flex items-center space-x-4 text-sm">
+        <div className="px-4 sm:px-6 pb-4">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-4 w-4 text-red-500" />
               <span>{errorsByType.error.length} Errors</span>
@@ -217,12 +218,14 @@ export function ValidationPanel({
           </div>
         </div>
         
-        <Tabs defaultValue="by-type" className="px-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="by-type">By Type</TabsTrigger>
-            <TabsTrigger value="by-entity">By Entity</TabsTrigger>
-            <TabsTrigger value="suggestions">AI Suggestions</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="by-type" className="px-4 sm:px-6">
+          <div className="responsive-overflow">
+            <TabsList className="grid w-full grid-cols-3 min-w-max">
+              <TabsTrigger value="by-type" className="text-xs sm:text-sm">By Type</TabsTrigger>
+              <TabsTrigger value="by-entity" className="text-xs sm:text-sm">By Entity</TabsTrigger>
+              <TabsTrigger value="suggestions" className="text-xs sm:text-sm">AI Suggestions</TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="by-type" className="mt-4">
             <ScrollArea className="h-[400px] pr-4">

@@ -418,8 +418,8 @@ export function RuleBuilder({
             <Alert>
               <Lightbulb className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                Try describing rules like: &quot;Tasks requiring Python skills should have priority&quot;, 
-                &quot;GroupA workers should not exceed 4 tasks per phase&quot;, or &quot;T1 must finish before T5 starts&quot;
+                Try describing rules like: "Tasks requiring Python skills should have priority", 
+                "GroupA workers should not exceed 4 tasks per phase", or "T1 must finish before T5 starts"
               </AlertDescription>
             </Alert>
           </TabsContent>
@@ -440,7 +440,7 @@ export function RuleBuilder({
             {recommendations.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Click &quot;Analyze&quot; to discover rule recommendations</p>
+                <p>Click "Analyze" to discover rule recommendations</p>
               </div>
             ) : (
               <div className="space-y-3">

@@ -82,7 +82,7 @@
   }
 }
 
-/* Apple-inspired design enhancements */
+/* Apple-inspired design enhancements with responsive improvements */
 @layer components {
   .glass-effect {
     @apply bg-white/80 backdrop-blur-xl border border-white/20;
@@ -108,6 +108,7 @@
     @apply inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 active:scale-95;
     @apply shadow-lg hover:shadow-xl;
+    @apply px-3 py-2 sm:px-4 sm:py-2 md:px-6 md:py-3;
   }
   
   .apple-card {
@@ -116,7 +117,7 @@
   }
   
   .apple-input {
-    @apply flex h-12 w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-10 sm:h-12 w-full rounded-xl border border-gray-200 bg-white/50 px-3 sm:px-4 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
     @apply backdrop-blur-sm transition-all duration-200;
   }
   
@@ -159,9 +160,59 @@
   .priority-thumb {
     @apply block h-5 w-5 rounded-full border-2 border-white bg-gradient-to-r from-blue-500 to-blue-600 ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 shadow-lg;
   }
+
+  /* Responsive container improvements */
+  .responsive-container {
+    @apply px-4 sm:px-6 lg:px-8 xl:px-12;
+  }
+
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+  }
+
+  .responsive-flex {
+    @apply flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6;
+  }
+
+  .responsive-text {
+    @apply text-sm sm:text-base lg:text-lg;
+  }
+
+  .responsive-heading {
+    @apply text-xl sm:text-2xl lg:text-3xl xl:text-4xl;
+  }
+
+  .responsive-card {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+
+  .responsive-button {
+    @apply px-3 py-2 text-sm sm:px-4 sm:py-2 sm:text-base lg:px-6 lg:py-3;
+  }
+
+  /* Mobile-first table improvements */
+  .mobile-table {
+    @apply block sm:table w-full;
+  }
+
+  .mobile-table-row {
+    @apply block sm:table-row border-b border-gray-200 mb-4 sm:mb-0 bg-white sm:bg-transparent rounded-lg sm:rounded-none shadow sm:shadow-none p-4 sm:p-0;
+  }
+
+  .mobile-table-cell {
+    @apply block sm:table-cell text-left sm:text-left py-2 sm:py-3 px-0 sm:px-3 border-b sm:border-b-0 sm:border-r border-gray-100 sm:border-gray-200;
+  }
+
+  .mobile-table-header {
+    @apply hidden sm:table-cell bg-gray-50 font-medium text-xs uppercase tracking-wider text-gray-500 p-3 border-b border-gray-200;
+  }
+
+  .mobile-label {
+    @apply inline-block sm:hidden font-medium text-gray-700 text-sm mb-1 min-w-[120px];
+  }
 }
 
-/* Smooth animations */
+/* Smooth animations with reduced motion support */
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
@@ -177,6 +228,28 @@
   
   .animate-pulse-subtle {
     animation: pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Responsive utilities */
+  .hide-mobile {
+    @apply hidden sm:block;
+  }
+
+  .show-mobile {
+    @apply block sm:hidden;
+  }
+
+  .responsive-overflow {
+    @apply overflow-x-auto sm:overflow-x-visible;
+  }
+
+  .responsive-whitespace {
+    @apply whitespace-nowrap sm:whitespace-normal;
+  }
+
+  /* Touch-friendly sizing */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
   }
 }
 
@@ -222,7 +295,7 @@
   }
 }
 
-/* Typography improvements */
+/* Typography improvements with responsive scaling */
 .text-gradient {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
@@ -230,9 +303,10 @@
   background-clip: text;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar with responsive sizing */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+  @apply sm:w-6;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -247,4 +321,77 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Responsive breakpoint indicators (for development) */
+@media (max-width: 639px) {
+  .debug-breakpoint::before {
+    content: "XS";
+    @apply fixed top-0 right-0 bg-red-500 text-white px-2 py-1 text-xs z-50;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .debug-breakpoint::before {
+    content: "SM";
+    @apply fixed top-0 right-0 bg-yellow-500 text-white px-2 py-1 text-xs z-50;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .debug-breakpoint::before {
+    content: "MD";
+    @apply fixed top-0 right-0 bg-green-500 text-white px-2 py-1 text-xs z-50;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .debug-breakpoint::before {
+    content: "LG";
+    @apply fixed top-0 right-0 bg-blue-500 text-white px-2 py-1 text-xs z-50;
+  }
+}
+
+@media (min-width: 1280px) {
+  .debug-breakpoint::before {
+    content: "XL";
+    @apply fixed top-0 right-0 bg-purple-500 text-white px-2 py-1 text-xs z-50;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .apple-card {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .apple-card {
+    border-width: 2px;
+  }
+  
+  .apple-button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-scale-in,
+  .animate-pulse-subtle {
+    animation: none;
+  }
+  
+  .transition-all {
+    transition: none;
+  }
 }
