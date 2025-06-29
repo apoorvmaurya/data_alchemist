@@ -1,0 +1,51 @@
+TaskID,TaskName,Category,Duration,RequiredSkills,PreferredPhases,MaxConcurrent
+T1,Frontend Development,Development,2,"JavaScript,React","[1,2,3]",3
+T2,Backend API Development,Development,3,"Python,Django","[2,3,4]",2
+T3,Database Design,Architecture,1,"PostgreSQL","[1,2]",4
+T4,Mobile App Development,Development,4,"React Native,Mobile Development","[3,4,5,6]",2
+T5,Machine Learning Model,AI/ML,3,"Python,Machine Learning,TensorFlow","[2,4,5]",1
+T6,System Architecture,Architecture,2,"System Programming,Linux","[1,3]",2
+T7,DevOps Setup,Infrastructure,2,"DevOps,CI/CD,Jenkins","[1,2,4]",3
+T8,UI/UX Design,Design,1,"UI/UX,Figma,Prototyping","[1,2,3,4]",4
+T9,Data Processing,Data,2,"Python,Data Science,Pandas","[2,3,5]",2
+T10,Microservices Development,Development,3,"Java,Kubernetes,Microservices","[3,4,5]",2
+T11,Quality Assurance,Testing,1,"JavaScript,Testing","[4,5,6]",5
+T12,Performance Optimization,Optimization,2,"C++,System Programming","[3,5]",1
+T13,Security Audit,Security,1,"Security,Penetration Testing","[2,4,6]",3
+T14,Integration Testing,Testing,1,"Integration,API Testing","[5,6]",4
+T15,Documentation,Documentation,1,"Technical Writing","[1,6]",6
+T16,Code Review,Review,1,"Code Review,Best Practices","[2,3,4,5]",8
+T17,Project Management,Management,2,"Project Management,Agile","[1,2,3,4,5,6]",2
+T18,Research & Development,Research,3,"Research,Innovation","[1,3,5]",1
+T19,Client Consultation,Consultation,1,"Communication,Domain Knowledge","[1,2,4,6]",4
+T20,Training & Knowledge Transfer,Training,1,"Teaching,Knowledge Sharing","[5,6]",3
+T21,Deployment,Infrastructure,1,"DevOps,Deployment","[6]",2
+T22,Monitoring Setup,Infrastructure,1,"Monitoring,Observability","[5,6]",3
+T23,Data Migration,Data,2,"Data Migration,ETL","[3,4]",2
+T24,Third-party Integration,Integration,2,"API Integration,Web Services","[2,3,4]",3
+T25,Load Testing,Testing,1,"Performance Testing,Load Testing","[4,5]",2
+T26,Bug Fixing,Maintenance,1,"Debugging,Problem Solving","[1,2,3,4,5,6]",6
+T27,Feature Enhancement,Enhancement,2,"Enhancement,Feature Development","[2,3,4,5]",3
+T28,Refactoring,Maintenance,2,"Code Refactoring,Clean Code","[3,4,5]",2
+T29,Analytics Implementation,Analytics,2,"Analytics,Data Tracking","[2,4,6]",2
+T30,Backup & Recovery,Infrastructure,1,"Backup,Disaster Recovery","[1,5]",1
+T31,User Acceptance Testing,Testing,1,"UAT,User Testing","[5,6]",4
+T32,Configuration Management,Configuration,1,"Configuration,Environment Setup","[1,2,3]",3
+T33,API Documentation,Documentation,1,"API Documentation,OpenAPI","[4,5]",3
+T34,Cross-platform Testing,Testing,2,"Cross-platform,Compatibility Testing","[4,5,6]",2
+T35,Cloud Migration,Infrastructure,3,"Cloud,AWS,Migration","[2,3,4]",1
+T36,Accessibility Audit,Accessibility,1,"Accessibility,WCAG","[3,5]",2
+T37,Compliance Review,Compliance,1,"Compliance,Regulations","[4,6]",2
+T38,Prototype Development,Prototyping,2,"Prototyping,MVP","[1,2]",3
+T39,Technology Evaluation,Evaluation,1,"Technology Assessment,Research","[1,3]",2
+T40,Risk Assessment,Risk Management,1,"Risk Analysis,Security","[2,5]",2
+T41,Stakeholder Review,Review,1,"Stakeholder Management,Presentation","[3,4,6]",3
+T42,Code Cleanup,Maintenance,1,"Code Cleanup,Technical Debt","[4,5]",4
+T43,Database Optimization,Optimization,2,"Database,Performance Tuning","[3,4]",1
+T44,Vendor Evaluation,Procurement,1,"Vendor Assessment,Procurement","[1,2]",2
+T45,Training Material Creation,Training,2,"Training Materials,Documentation","[4,5,6]",2
+T46,Proof of Concept,POC,2,"POC,Feasibility Study","[1,2,3]",2
+T47,Competitive Analysis,Analysis,1,"Market Research,Competitive Analysis","[1,4]",3
+T48,Cost Optimization,Optimization,1,"Cost Analysis,Resource Optimization","[5,6]",2
+T49,Change Management,Change,1,"Change Management,Process Improvement","[2,6]",2
+T50,Final Review,Review,1,"Final Review,Sign-off","[6]",1
